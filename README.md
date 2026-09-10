@@ -28,6 +28,10 @@ Everything is a keystroke — there are no command-palette entries for the actio
 
 Opens the find box with the cursor in **Find**. Type a query and the matches highlight as you go. **Enter** and **Shift+Enter** step through them, **Tab** moves to the **Replace** field, and the ✓ button (or **⌘Enter**) replaces every match.
 
+### Move through occurrences — ⌘G
+
+Select a word and press **⌘G** to move the selection — and the cursor with it — to the next occurrence, **⌘⇧G** for the previous. One selection that hops, wrapping at the end. The count reads as a position: *2 of 4*. Focus stays in the editor so you can keep stepping.
+
 ### Select occurrences — ⌘D
 
 Select a word, or just put the caret in one, and press **⌘D**. It adds that occurrence to a growing selection and drops the cursor into the **Replace** box, prefilled with the word. Each further **⌘D** adds the next occurrence; **⌥⌘D** removes the one you added last. Type a replacement and press **Enter** to rewrite the whole set at once. **⌘⇧A** grabs every occurrence in one go.
@@ -44,7 +48,7 @@ Focus stays in the replace box the entire time, so you can keep pressing ⌘D wh
 
 **Aa** matches case and **ab|** matches whole words. Both are sticky — whichever way you set them is how the next session starts, and the settings panel shows the same two values.
 
-The count tells you what the ✓ will actually do, as a stoplight: **red** nothing will change, **yellow** some matches can't be rewritten, **white** it covers everything.
+While ⌘G cycles, the count is your position (*2 of 4*). Otherwise it tells you what the ✓ will actually do, as a stoplight: **red** nothing will change, **yellow** some matches can't be rewritten, **white** it covers everything.
 
 The box places itself clear of every match you can see, flipping above or beside them near an edge so it's never clipped. You can also **drag it** anywhere by its background; once you move it by hand it stays put until you close it.
 

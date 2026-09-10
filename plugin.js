@@ -4171,6 +4171,7 @@ ${report}
       this.rows = /* @__PURE__ */ new Map();
       this.current = null;
       this.selected = [];
+      this.stepping = false;
       this.sdkTotal = 0;
       this.sdkReplaceable = 0;
       this.suppressUntil = 0;
@@ -4308,8 +4309,8 @@ ${report}
     }
     /* ── navigation ───────────────────────────────────────────────────── */
     /**
-     * Move `current` to the next/previous match (find mode navigation), make it
-     * Thymer's real selection, and scroll it into view.
+     * Move `current` to the next/previous match, make it Thymer's real selection
+     * and scroll it into view. This is the ⌘G mover and find-mode's Enter.
      * @param {1 | -1} dir @returns {boolean}
      */
     step(dir) {
@@ -4326,6 +4327,8 @@ ${report}
         if (!this.wrap) return false;
         next = (next + list.length) % list.length;
       }
+      if (this.mode === "select") this.selected = [list[next]];
+      this.stepping = true;
       this.setCurrent(list[next]);
       return true;
     }
@@ -4335,6 +4338,7 @@ ${report}
      * @param {DomMatch} m
      */
     seedSelection(m) {
+      this.stepping = false;
       this.selected = m && m.replaceable ? [m] : [];
       this.current = this.selected[0] || null;
       if (this.current) this.setCurrent(this.current);
@@ -4347,6 +4351,7 @@ ${report}
      * @param {1 | -1} dir @returns {boolean}
      */
     addNext(dir) {
+      this.stepping = false;
       if (dir < 0) return this.removeLast();
       const list = this.navMatches();
       if (!list.length) return false;
@@ -4643,7 +4648,7 @@ ${report}
     const count = el2("div", "fnr-count", { "aria-live": "polite" });
     status.append(hints, count);
     root.append(rail, query, replace, allBtn, closeBtn, status);
-    let state = { mode: "find", query: "", current: 0, replaceCount: 0, matchCount: 0, caseSensitive: false, wholeWord: false, supported: true, shortcuts: { next: "", prev: "", all: "", find: "" } };
+    let state = { mode: "find", query: "", current: 0, replaceCount: 0, matchCount: 0, stepping: false, caseSensitive: false, wholeWord: false, supported: true, shortcuts: { next: "", prev: "", all: "", find: "" } };
     caseBtn.addEventListener("click", () => h2.onToggleCase());
     wordBtn.addEventListener("click", () => h2.onToggleWord());
     closeBtn.addEventListener("click", () => h2.onClose());
@@ -4733,16 +4738,19 @@ ${report}
       wordBtn.classList.toggle("on", next.wholeWord);
       wordBtn.setAttribute("aria-pressed", String(next.wholeWord));
       var x = next.replaceCount, y = next.matchCount;
+      const positional = next.mode === "find" || next.stepping;
       if (y === 0) count.textContent = next.query ? "No matches" : "\u2014";
-      else if (next.mode === "find") count.textContent = `${next.current || "\u2013"} of ${y}`;
+      else if (positional) count.textContent = `${next.current || "\u2013"} of ${y}`;
       else count.textContent = `Replace ${x} in ${y}`;
       count.classList.remove("none", "skipping", "complete", "unsupported");
       if (!next.supported) {
         count.textContent = "highlighting off";
         count.classList.add("unsupported");
-      } else if (y === 0 || x === 0) {
-        if (y > 0 || next.query) count.classList.add("none");
-      } else if (x < y) count.classList.add("skipping");
+      } else if (y === 0) {
+        if (next.query) count.classList.add("none");
+      } else if (positional) count.classList.add("complete");
+      else if (x === 0) count.classList.add("none");
+      else if (x < y) count.classList.add("skipping");
       else count.classList.add("complete");
       var sc = next.shortcuts || {};
       cmdNextKey.textContent = sc.next ? formatCombo(sc.next) : "";
@@ -5784,7 +5792,7 @@ ${report}
   __name(renderSettings, "renderSettings");
 
   // plugin.js
-  var PLUGIN_VERSION = "1.0.0";
+  var PLUGIN_VERSION = "1.1.0";
   var PLUGIN_NAME = "Find and Replace";
   var SLUG = "find-and-replace";
   var ROOT_CLASS = "plg-fnr";
@@ -5792,8 +5800,10 @@ ${report}
   var HL_STYLE_ID = "tc-highlight-style";
   var UNDO_LIMIT = 20;
   var COMMANDS = Object.freeze([
-    { id: "next", label: "Select next occurrence", icon: "arrow-down", mac: "Meta+D", other: "Ctrl+D", hint: "Jump the selection to the next match of the selected word." },
-    { id: "prev", label: "Select previous occurrence", icon: "arrow-up", mac: "Alt+Meta+D", other: "Ctrl+Alt+D", hint: "Same, backwards." },
+    { id: "next", label: "Add next occurrence", icon: "arrow-down", mac: "Meta+D", other: "Ctrl+D", hint: "Grow the selection by one more occurrence of the selected word." },
+    { id: "prev", label: "Drop last added occurrence", icon: "arrow-up", mac: "Alt+Meta+D", other: "Ctrl+Alt+D", hint: "Shrink the selection again, most recent first." },
+    { id: "stepNext", label: "Move to next occurrence", icon: "arrow-down", mac: "Meta+G", other: "Ctrl+G", hint: "Move the one selection, and the cursor, to the next match \u2014 no accumulating." },
+    { id: "stepPrev", label: "Move to previous occurrence", icon: "arrow-up", mac: "Shift+Meta+G", other: "Ctrl+Shift+G", hint: "Same, backwards." },
     { id: "all", label: "Select all occurrences", icon: "list-search", mac: "Shift+Meta+A", other: "Ctrl+Shift+A", hint: "Mark every match and open the replace box." },
     { id: "find", label: "Find and replace", icon: "search", mac: "Meta+F", other: "Ctrl+F", hint: "Type a query instead of selecting one. \u2318F only reaches the plugin if the OS/Thymer find-in-page on that key is reassigned first." },
     { id: "undo", label: "Undo last replace", icon: "arrow-back-up", mac: "", other: "", noKey: true, hint: "Restore the lines the last replace rewrote. Also \u2318Z, until you type something yourself." },
@@ -6161,6 +6171,10 @@ ${report}
             return this._selectStep(1);
           case "prev":
             return this._selectStep(-1);
+          case "stepNext":
+            return this._stepSelection(1);
+          case "stepPrev":
+            return this._stepSelection(-1);
           case "all":
             return this._selectAll();
           case "find":
@@ -6327,6 +6341,38 @@ ${report}
         } catch {
         }
       }
+    }
+    /**
+     * ⌘G / ⌘⇧G move the ONE selection (and the caret with it) to the next or
+     * previous occurrence. Unlike ⌘D this never accumulates, and it deliberately
+     * leaves focus in the editor so you can keep stepping.
+     * @param {1 | -1} dir
+     */
+    _stepSelection(dir) {
+      const panel2 = this._editorPanel();
+      if (!panel2) return;
+      let session = this._session;
+      const live = readThymerSelection(panel2.el);
+      const liveText = live && !("multi" in live) ? live.text : null;
+      const reusable = !!session && (!liveText || liveText.toLowerCase() === session.query.toLowerCase());
+      if (!reusable) {
+        const seed = liveText ? live : this._seed(panel2.el);
+        if (!seed || "multi" in seed) {
+          if (seed) this._toast("Select text on a single line");
+          return;
+        }
+        session = this._startSession("select", seed.text, panel2);
+        const own = (session.rows.get(seed.row.getAttribute("data-guid") || "") || []).find((m) => m.node === seed.node && m.start === seed.start);
+        if (own && own.replaceable) session.seedSelection(own);
+      }
+      if (!session) return;
+      if (!session.step(dir)) {
+        this._toast(
+          session.total ? "No more occurrences" : "No matches",
+          session.total ? 'Turn on "Wrap around" in settings to loop.' : void 0
+        );
+      }
+      this._refreshChip(true);
     }
     /**
      * ⌘D adds the next occurrence to a growing selection (VS Code's add-selection,
@@ -6602,7 +6648,8 @@ ${report}
       }
       const chip = this._ensureChip();
       const selecting = s.mode === "select";
-      const matchCount = Math.max(s.sdkTotal || 0, s.total + s.skipped);
+      const stepping = selecting && s.stepping;
+      const matchCount = stepping ? s.total : Math.max(s.sdkTotal || 0, s.total + s.skipped);
       const replaceCount = selecting ? s.selectedCount : Math.max(s.sdkReplaceable || 0, s.total);
       chip.update({
         mode: s.mode,
@@ -6612,6 +6659,7 @@ ${report}
         matchCount,
         caseSensitive: s.flags.caseSensitive,
         wholeWord: s.flags.wholeWord,
+        stepping,
         supported: highlightsSupported(),
         shortcuts: {
           next: this._settings.shortcuts.next,
