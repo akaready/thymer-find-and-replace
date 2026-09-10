@@ -1,4 +1,4 @@
-# Find-N-Replace
+# Find and Replace
 
 Find and replace across the current page in Thymer, plus VS Code-style **⌘D** occurrence selection — the find & replace Thymer doesn't ship yet.
 
@@ -16,13 +16,13 @@ Enjoy! 🙏
 
 ## 📦 Install
 
-**Recommended:** Use the <a href="https://github.com/ahpatel/thymer-plugins-manager" target="_blank" rel="noopener noreferrer">Thymer Plugins Manager</a> and install via <a href="https://github.com/akaready/thymer-find-n-replace" target="_blank" rel="noopener noreferrer">this repo's URL</a>. You'll get notifications when new versions ship.
+**Recommended:** Use the <a href="https://github.com/ahpatel/thymer-plugins-manager" target="_blank" rel="noopener noreferrer">Thymer Plugins Manager</a> and install via <a href="https://github.com/akaready/thymer-find-and-replace" target="_blank" rel="noopener noreferrer">this repo's URL</a>. You'll get notifications when new versions ship.
 
 **Manual:** copy <a href="plugin.js" target="_blank" rel="noopener noreferrer"><code>plugin.js</code></a> and <a href="plugin.json" target="_blank" rel="noopener noreferrer"><code>plugin.json</code></a> from this repo into Thymer's plugin editor.
 
 ## ⌨️ Use
 
-Everything is a keystroke — there are no command-palette entries for the actions, only **Plugin: Find-N-Replace** for the settings panel.
+Everything is a keystroke — there are no command-palette entries for the actions, only **Plugin: Find and Replace** for the settings panel.
 
 ### Find and replace — ⌘F
 
@@ -54,7 +54,7 @@ The box places itself clear of every match you can see, flipping above or beside
 
 Replacements go through Thymer's plugin API, which its own undo doesn't track, so **⌘Z** reverts them here instead — the whole batch in one press. **⌘⇧Z** re-applies it. As soon as you type anything yourself, undo hands back to Thymer.
 
-Rebind any shortcut in the settings panel: **Plugin: Find-N-Replace**.
+Rebind any shortcut in the settings panel: **Plugin: Find and Replace**.
 
 ### ⌘F and the native find-in-page
 

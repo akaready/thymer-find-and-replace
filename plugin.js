@@ -4611,7 +4611,7 @@ ${report}
   }
   __name(el2, "el");
   function createChip(h2) {
-    const root = el2("div", CHIP_CLASS, { role: "toolbar", "aria-label": "Find-N-Replace" });
+    const root = el2("div", CHIP_CLASS, { role: "toolbar", "aria-label": "Find and Replace" });
     root.hidden = true;
     const rail = el2("div", "fnr-rail");
     const caseBtn = el2("button", "fnr-tgl", { type: "button", title: "Match case", "aria-pressed": "false" }, "Aa");
@@ -5763,7 +5763,7 @@ ${report}
         label: "Appearance",
         collapsible: true,
         defaultOpen: false,
-        persistKey: "find-n-replace.appearance",
+        persistKey: "find-and-replace.appearance",
         body: [
           colorRow("matchColor", "Match colour", "Every occurrence. Mixed to a tint so the text stays readable; tag/link matches use a dimmer version."),
           colorRow("currentColor", "Current match colour", "The occurrence the selection is on.")
@@ -5773,7 +5773,7 @@ ${report}
         label: "Not possible from a plugin",
         collapsible: true,
         defaultOpen: false,
-        persistKey: "find-n-replace.limits",
+        persistKey: "find-and-replace.limits",
         body: [
           h("p", { class: "tc-not-feasible" }, "True multi-cursor typing, column (box) selection, and selections that span more than one line. Thymer draws its own caret and selection and the plugin SDK has no selection API, so \u201Cselect all occurrences\u201D marks every match and offers a replace box instead of N live cursors.")
         ]
@@ -5785,10 +5785,10 @@ ${report}
 
   // plugin.js
   var PLUGIN_VERSION = "1.0.0";
-  var PLUGIN_NAME = "Find-N-Replace";
-  var SLUG = "find-n-replace";
+  var PLUGIN_NAME = "Find and Replace";
+  var SLUG = "find-and-replace";
   var ROOT_CLASS = "plg-fnr";
-  var PANEL_TYPE = "find-n-replace-settings";
+  var PANEL_TYPE = "find-and-replace-settings";
   var HL_STYLE_ID = "tc-highlight-style";
   var UNDO_LIMIT = 20;
   var COMMANDS = Object.freeze([
@@ -5917,7 +5917,7 @@ ${report}
         name: PLUGIN_NAME,
         icon: "search",
         description: "Find and replace across the page, with VS Code-style \u2318D occurrence selection.",
-        sourceRepo: "https://github.com/akaready/thymer-find-n-replace",
+        sourceRepo: "https://github.com/akaready/thymer-find-and-replace",
         sourceFiles: { branch: "main", json: "plugin.json", js: "plugin.js" }
       });
       this._disabled = readKillSwitch(this);
@@ -6171,7 +6171,7 @@ ${report}
             return void this._redo();
         }
       } catch (err) {
-        console.error("[find-n-replace]", id, err);
+        console.error("[find-and-replace]", id, err);
         this._toast("Something went wrong", String(err && /** @type {any} */
         err.message || err));
       }
@@ -6434,7 +6434,7 @@ ${report}
         }
         if (redoLines.length) this._redoStack.push({ label: entry.label, lines: redoLines });
       } catch (err) {
-        console.error("[find-n-replace] undo", err);
+        console.error("[find-and-replace] undo", err);
       } finally {
         this._undoBusy = false;
       }
@@ -6468,7 +6468,7 @@ ${report}
         }
         if (undoLines.length) this._undoStack.push({ label: entry.label, lines: undoLines });
       } catch (err) {
-        console.error("[find-n-replace] redo", err);
+        console.error("[find-and-replace] redo", err);
       } finally {
         this._undoBusy = false;
       }
