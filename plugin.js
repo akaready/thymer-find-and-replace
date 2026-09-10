@@ -4309,6 +4309,44 @@ ${report}
     }
     /* ── navigation ───────────────────────────────────────────────────── */
     /**
+     * Where Thymer's caret actually is, as a text position inside this panel —
+     * or null if it can't be read. This is what makes ⌘G resume from wherever you
+     * were last editing rather than from a stale `current`.
+     * @returns {{ node: Text, offset: number } | null}
+     */
+    caretAnchor() {
+      try {
+        const caret = thymerCaretEl();
+        if (!caret) return null;
+        const pos = textPositionAtPoint(caret.rect.left + 1, caret.rect.top + caret.rect.height / 2);
+        if (!pos || !pos.node.parentElement) return null;
+        return this.host.panelEl.contains(pos.node.parentElement) ? pos : null;
+      } catch {
+        return null;
+      }
+    }
+    /**
+     * Where a match sits relative to the caret: -1 it ends before, 1 it starts
+     * after, 0 the caret is inside it.
+     * @param {DomMatch} m @param {{ node: Text, offset: number }} anchor @returns {-1 | 0 | 1}
+     */
+    positionVsCaret(m, anchor) {
+      if (m.node === anchor.node) {
+        if (m.end <= anchor.offset) return -1;
+        if (m.start >= anchor.offset) return 1;
+        return 0;
+      }
+      let rel = 0;
+      try {
+        rel = anchor.node.compareDocumentPosition(m.node);
+      } catch {
+        return 0;
+      }
+      if (rel & Node.DOCUMENT_POSITION_FOLLOWING) return 1;
+      if (rel & Node.DOCUMENT_POSITION_PRECEDING) return -1;
+      return 0;
+    }
+    /**
      * Move `current` to the next/previous match, make it Thymer's real selection
      * and scroll it into view. This is the ⌘G mover and find-mode's Enter.
      * @param {1 | -1} dir @returns {boolean}
@@ -4316,16 +4354,39 @@ ${report}
     step(dir) {
       const list = this.navMatches();
       if (!list.length) return false;
-      let i = this.current ? list.indexOf(this.current) : -1;
-      if (i < 0) {
-        const caretRow = this.host.panelEl.querySelector(".listitem.listitem-with-caret[data-guid]");
-        const at = caretRow ? list.findIndex((m) => m.row === caretRow) : -1;
-        i = dir > 0 ? at >= 0 ? at - 1 : -1 : at >= 0 ? at + 1 : list.length;
-      }
-      let next = i + dir;
-      if (next < 0 || next >= list.length) {
-        if (!this.wrap) return false;
-        next = (next + list.length) % list.length;
+      let next = -1;
+      const anchor = Date.now() >= this.suppressUntil ? this.caretAnchor() : null;
+      if (anchor) {
+        if (dir > 0) {
+          next = list.findIndex((m) => this.positionVsCaret(m, anchor) === 1);
+          if (next < 0) {
+            if (!this.wrap) return false;
+            next = 0;
+          }
+        } else {
+          for (let k = list.length - 1; k >= 0; k--) {
+            if (this.positionVsCaret(list[k], anchor) === -1) {
+              next = k;
+              break;
+            }
+          }
+          if (next < 0) {
+            if (!this.wrap) return false;
+            next = list.length - 1;
+          }
+        }
+      } else {
+        let i = this.current ? list.indexOf(this.current) : -1;
+        if (i < 0) {
+          const caretRow = this.host.panelEl.querySelector(".listitem.listitem-with-caret[data-guid]");
+          const at = caretRow ? list.findIndex((m) => m.row === caretRow) : -1;
+          i = dir > 0 ? at >= 0 ? at - 1 : -1 : at >= 0 ? at + 1 : list.length;
+        }
+        next = i + dir;
+        if (next < 0 || next >= list.length) {
+          if (!this.wrap) return false;
+          next = (next + list.length) % list.length;
+        }
       }
       if (this.mode === "select") this.selected = [list[next]];
       this.stepping = true;
@@ -5792,7 +5853,7 @@ ${report}
   __name(renderSettings, "renderSettings");
 
   // plugin.js
-  var PLUGIN_VERSION = "1.1.0";
+  var PLUGIN_VERSION = "1.1.1";
   var PLUGIN_NAME = "Find and Replace";
   var SLUG = "find-and-replace";
   var ROOT_CLASS = "plg-fnr";
