@@ -4708,13 +4708,33 @@ ${report}
     hints.append(cmdNextBtn, cmdAllBtn);
     const count = el2("div", "fnr-count", { "aria-live": "polite" });
     status.append(hints, count);
-    root.append(rail, query, replace, allBtn, closeBtn, status);
+    const measure = el2("span", "fnr-measure");
+    root.append(rail, query, replace, allBtn, closeBtn, status, measure);
     let state = { mode: "find", query: "", current: 0, replaceCount: 0, matchCount: 0, stepping: false, caseSensitive: false, wholeWord: false, supported: true, shortcuts: { next: "", prev: "", all: "", find: "" } };
+    const FIELD_BASE = 300, FIELD_MAX = 560;
+    function autosize() {
+      const widest = Math.max(
+        textWidth(query.value || query.placeholder || ""),
+        textWidth(replace.value || replace.placeholder || "")
+      );
+      const want = Math.max(FIELD_BASE, Math.min(FIELD_MAX, widest + 28));
+      root.style.setProperty("--fnr-field", Math.round(want) + "px");
+    }
+    __name(autosize, "autosize");
+    function textWidth(text) {
+      measure.textContent = text;
+      return measure.offsetWidth;
+    }
+    __name(textWidth, "textWidth");
     caseBtn.addEventListener("click", () => h2.onToggleCase());
     wordBtn.addEventListener("click", () => h2.onToggleWord());
     closeBtn.addEventListener("click", () => h2.onClose());
     allBtn.addEventListener("click", () => h2.onReplaceAll(replace.value));
-    query.addEventListener("input", () => h2.onQuery(query.value));
+    query.addEventListener("input", () => {
+      autosize();
+      h2.onQuery(query.value);
+    });
+    replace.addEventListener("input", () => autosize());
     cmdNextBtn.addEventListener("click", () => h2.onCommand("next"));
     cmdAllBtn.addEventListener("click", () => h2.onCommand("all"));
     root.addEventListener("keydown", (ev) => {
@@ -4819,10 +4839,12 @@ ${report}
       allBtn.title = next.mode === "select" ? "Replace the selected occurrences" : "Replace all matches";
       allBtn.setAttribute("aria-label", allBtn.title);
       allBtn.disabled = !(x > 0);
+      autosize();
     }
     __name(update, "update");
     function place(anchor, panelRect) {
       root.hidden = false;
+      autosize();
       if (moved) return;
       const m = 8, gap = 6;
       const vw = window.innerWidth, vh = window.innerHeight;
@@ -4896,20 +4918,27 @@ ${report}
 	position: fixed;
 	z-index: 9000;
 	display: grid;
-	grid-template-columns: auto minmax(0, 1fr) auto;
+	grid-template-columns: auto minmax(0, var(--fnr-field, 300px)) auto;
 	grid-template-areas:
 		"rail find close"
 		"rail replace all"
-		"count count count";
-	column-gap: 7px;
-	row-gap: 7px;
+		".    status status";
+	column-gap: 8px;
+	row-gap: 8px;
 	align-items: center;
-	width: min(292px, calc(100vw - 24px));
-	padding: 9px;
-	border-radius: 10px;
-	background: var(--bg-default, var(--panel-bg-color, Canvas));
-	border: 1px solid var(--border-default, rgba(127, 127, 127, 0.25));
-	box-shadow: 0 8px 30px rgba(0, 0, 0, 0.22);
+	max-width: calc(100vw - 24px);
+	padding: 11px;
+	border-radius: 12px;
+	/* Elevation: the base surface plus a thin light wash, so the chip reads as
+	   floating above the page in a dark theme without going grey in a light one.
+	   Border and shadow do the rest. */
+	background-color: var(--bg-default, var(--panel-bg-color, Canvas));
+	background-image: linear-gradient(rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.075));
+	border: 1px solid var(--border-hover, rgba(127, 127, 127, 0.45));
+	box-shadow:
+		0 18px 44px rgba(0, 0, 0, 0.38),
+		0 4px 12px rgba(0, 0, 0, 0.24),
+		inset 0 1px 0 rgba(255, 255, 255, 0.06);
 	font-family: inherit;
 	font-size: 12.5px;
 	line-height: 1;
@@ -4924,6 +4953,11 @@ ${report}
 .${CHIP_CLASS} input { cursor: text; }
 .${CHIP_CLASS} button { cursor: pointer; }
 .${CHIP_CLASS}[hidden] { display: none; }
+.${CHIP_CLASS} .fnr-measure {
+	position: absolute; left: -9999px; top: 0;
+	visibility: hidden; white-space: pre; pointer-events: none;
+	font: inherit; font-size: 12.5px;
+}
 .${CHIP_CLASS} .fnr-rail {
 	grid-area: rail;
 	display: flex; flex-direction: column; gap: 6px; justify-content: center;
@@ -4937,7 +4971,7 @@ ${report}
 
 .${CHIP_CLASS} .fnr-field {
 	width: 100%;
-	height: 28px;
+	height: 30px;
 	padding: 0 9px;
 	font: inherit;
 	font-size: 12.5px;
@@ -4952,7 +4986,7 @@ ${report}
 .${CHIP_CLASS} .fnr-field:focus { border-color: var(--logo-color, #04d1ab); box-shadow: 0 0 0 2px color-mix(in srgb, var(--logo-color, #04d1ab) 28%, transparent); }
 
 .${CHIP_CLASS} .fnr-tgl {
-	width: 100%; height: 28px; padding: 0 8px;
+	width: 100%; height: 30px; padding: 0 8px;
 	display: inline-flex; align-items: center; justify-content: center;
 	font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
 	color: var(--text-muted, rgba(127, 127, 127, 0.9));
@@ -4979,7 +5013,7 @@ ${report}
 .${CHIP_CLASS} .fnr-all:disabled:hover { background: transparent; }
 
 .${CHIP_CLASS} .fnr-close {
-	height: 28px; min-width: 26px; padding: 0 6px;
+	height: 30px; min-width: 26px; padding: 0 6px;
 	display: inline-flex; align-items: center; justify-content: center;
 	font: inherit; font-size: 15px;
 	color: var(--text-muted, rgba(127, 127, 127, 0.9));
@@ -4988,7 +5022,7 @@ ${report}
 .${CHIP_CLASS} .fnr-close:hover { color: var(--text-default, inherit); background: var(--bg-hover, rgba(127, 127, 127, 0.12)); }
 
 .${CHIP_CLASS} .fnr-status {
-	grid-area: count;
+	grid-area: status;
 	display: flex; align-items: center; justify-content: space-between; gap: 10px; min-width: 0;
 }
 .${CHIP_CLASS} .fnr-hints { display: inline-flex; align-items: center; gap: 5px; min-width: 0; }
@@ -5853,7 +5887,7 @@ ${report}
   __name(renderSettings, "renderSettings");
 
   // plugin.js
-  var PLUGIN_VERSION = "1.1.1";
+  var PLUGIN_VERSION = "1.1.2";
   var PLUGIN_NAME = "Find and Replace";
   var SLUG = "find-and-replace";
   var ROOT_CLASS = "plg-fnr";
