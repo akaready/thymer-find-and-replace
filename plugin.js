@@ -2971,7 +2971,11 @@ ${report}
     }
     if (conf.ver === void 0 && conf.custom === void 0) return;
     const hasStubName = typeof conf.name !== "string" || !conf.name.trim() || STUB_NAMES.includes(conf.name.trim());
-    const missingRepo = identity.sourceRepo && conf.__source_repo === void 0;
+    const staleRepo = !!identity.sourceRepo && Array.isArray(identity.legacySourceRepos) && identity.legacySourceRepos.includes(
+      /** @type {string} */
+      conf.__source_repo
+    );
+    const missingRepo = !!identity.sourceRepo && (conf.__source_repo === void 0 || staleRepo);
     if (!hasStubName && !missingRepo) return;
     try {
       let ws = "default";
@@ -5887,7 +5891,7 @@ ${report}
   __name(renderSettings, "renderSettings");
 
   // plugin.js
-  var PLUGIN_VERSION = "1.1.2";
+  var PLUGIN_VERSION = "1.1.3";
   var PLUGIN_NAME = "Find and Replace";
   var SLUG = "find-and-replace";
   var ROOT_CLASS = "plg-fnr";
@@ -6136,8 +6140,7 @@ ${report}
       if (this._disabled) return;
       if (e.key === "Escape") {
         if (this._session) {
-          e.preventDefault();
-          e.stopPropagation();
+          this._claim(e);
           this._endSession();
         }
         return;
@@ -6147,20 +6150,17 @@ ${report}
         e.target
       )) {
         if (e.key === "Tab") {
-          e.preventDefault();
-          e.stopPropagation();
+          this._claim(e);
           this._chip.focusStep(e.shiftKey ? -1 : 1);
           return;
         }
         if (this._undoStack.length && this._isUndoKey(e)) {
-          e.preventDefault();
-          e.stopPropagation();
+          this._claim(e);
           void this._undo();
           return;
         }
         if (this._redoStack.length && this._isRedoKey(e)) {
-          e.preventDefault();
-          e.stopPropagation();
+          this._claim(e);
           void this._redo();
           return;
         }
@@ -6169,8 +6169,7 @@ ${report}
       }
       if (!this._editorHasKeys()) return;
       if (e.key === "Tab" && !e.shiftKey && this._session && this._session.mode === "select" && this._session.selectedCount > 0 && this._chip && !this._chip.el.hidden) {
-        e.preventDefault();
-        e.stopPropagation();
+        this._claim(e);
         this._returnFocusEl = /** @type {HTMLElement | null} */
         document.activeElement;
         this._chip.focus("replace");
@@ -6178,14 +6177,12 @@ ${report}
       }
       if (this._undoStack.length || this._redoStack.length) {
         if (this._undoStack.length && this._isUndoKey(e)) {
-          e.preventDefault();
-          e.stopPropagation();
+          this._claim(e);
           void this._undo();
           return;
         }
         if (this._redoStack.length && this._isRedoKey(e)) {
-          e.preventDefault();
-          e.stopPropagation();
+          this._claim(e);
           void this._redo();
           return;
         }
@@ -6207,6 +6204,25 @@ ${report}
       return e.key.length === 1;
     }
     /**
+     * Take a keystroke for this plugin alone.
+     *
+     * stopPropagation() only blocks the REST of the path — document, the editor,
+     * the event target. It does nothing about another plugin's handler sitting on
+     * `window` in the same capture phase, which is the pattern every AppPlugin in
+     * this repo uses. Without stopImmediatePropagation(), ⌘D reached Reshape and
+     * duplicated the line while we were selecting occurrences.
+     *
+     * Caveat: this beats listeners registered AFTER ours. Nothing in a plugin can
+     * pre-empt one registered earlier — same node, same phase is registration
+     * order — so if a clash survives this, the two bindings have to differ.
+     * @param {KeyboardEvent} e
+     */
+    _claim(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }
+    /**
      * Run whichever command this keystroke is bound to. Every binding is a
      * modifier combo, so this is safe to consult even while typing in the chip.
      * @param {KeyboardEvent} e @returns {boolean} handled
@@ -6216,8 +6232,7 @@ ${report}
         const combo = this._settings.shortcuts[c.id];
         if (!combo) continue;
         if (comboMatches(e, parseCombo(combo))) {
-          e.preventDefault();
-          e.stopPropagation();
+          this._claim(e);
           this._run(
             /** @type {CommandId} */
             c.id
