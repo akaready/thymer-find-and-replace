@@ -5891,7 +5891,7 @@ ${report}
   __name(renderSettings, "renderSettings");
 
   // plugin.js
-  var PLUGIN_VERSION = "1.1.3";
+  var PLUGIN_VERSION = "1.1.4";
   var PLUGIN_NAME = "Find and Replace";
   var SLUG = "find-and-replace";
   var ROOT_CLASS = "plg-fnr";
@@ -6098,13 +6098,13 @@ ${report}
         /** @type {const} */
         ["panel.navigated", "panel.focused", "panel.closed"]
       ) {
-        this._handlerIds.push(this.events.on(ev, () => this._endSession()));
+        this._handlerIds.push(this.events.on(ev, () => this._endSession({ restore: false })));
       }
     }
     onUnload() {
       this._cancelPillSettle?.();
       this._cancelPillSettle = null;
-      this._endSession();
+      this._endSession({ restore: false });
       if (this._chip) {
         this._chip.destroy();
         this._chip = null;
@@ -6405,6 +6405,7 @@ ${report}
      * @param {{ guid: string, offset: number }} mark
      */
     _restoreCaret(mark) {
+      if (!this._editorHasKeys()) return;
       const panel2 = this._editorPanel();
       if (!panel2) return;
       const row = panel2.el.querySelector(`${LISTITEM_SEL}[data-guid="${CSS.escape(mark.guid)}"]`);
@@ -6425,7 +6426,8 @@ ${report}
     }
     /** @param {{ restore?: boolean }} [opts] restore:false when a new session follows immediately */
     _endSession(opts) {
-      const restore = !opts || opts.restore !== false;
+      const hadSession = !!this._session;
+      const restore = hadSession && (!opts || opts.restore !== false);
       if (this._queryRaf) {
         cancelAnimationFrame(this._queryRaf);
         this._queryRaf = 0;
@@ -6435,11 +6437,15 @@ ${report}
         this._session = null;
       }
       this._sessionPanel = null;
+      const active = document.activeElement;
+      if (active instanceof HTMLElement && this._chip && this._chip.contains(active)) active.blur();
       this._chip?.hide();
       const rc = this._returnCaret;
+      this._returnCaret = null;
       const fe = this._returnFocusEl;
       this._returnFocusEl = null;
-      if (rc && restore) setTimeout(() => {
+      if (!restore) return;
+      if (rc) setTimeout(() => {
         try {
           this._restoreCaret(rc);
         } catch {
