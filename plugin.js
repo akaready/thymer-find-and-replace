@@ -198,7 +198,7 @@ var plugins = (() => {
   font-size: var(--tps-fs-body);
   line-height: var(--tps-lh-base);
   color: var(--tps-text);
-  padding: 0 var(--tps-space-5) var(--tps-space-7);
+  padding: 0 var(--tps-panel-pad-x, var(--tps-space-5)) var(--tps-space-7);
   width: 100%;
   height: 100%;
   box-sizing: border-box;
@@ -1694,6 +1694,43 @@ var plugins = (() => {
   border-radius: var(--tps-radius-lg);
   background: var(--tps-bg-input);
   border: 1px solid var(--tps-divider);
+}
+
+/* \u2500\u2500 Narrow panels (phones, narrow windows) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 */
+
+/* Side padding is one variable so phones can reclaim the gutter. 12px stays
+   clear of the -10px / -12px row bleed some plugin rows use. */
+@media (max-width: 640px) {
+  .tps-panel.tps-panel { --tps-panel-pad-x: var(--tps-space-3); }
+
+  /* Labels wrap instead of ellipsizing, so "Previous day" is readable. */
+  .tps-list-name {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+  }
+
+  /* Icon-less rows (keyRow) drop the empty 18px icon slot and its gap. */
+  .tps-list-row:has(> :first-child:empty),
+  .tps-list-header:has(> :first-child:empty) {
+    grid-template-columns: 0 minmax(0, 1fr) auto;
+    column-gap: 0;
+  }
+  .tps-list-row:has(> :first-child:empty) > .tps-list-name { padding-right: var(--tps-space-3); }
+
+  .tps-key-chip { min-width: 72px; }
+  .tps-num-grid { grid-template-columns: minmax(0, 1fr); }
+  .tps-tabs { flex-wrap: wrap; max-width: 100%; }
+}
+
+/* Touch screens get finger-sized controls. */
+@media (pointer: coarse) {
+  .tps-panel.tps-panel {
+    --tps-control-h-sm: 36px;
+    --tps-control-h-md: 40px;
+    --tps-num-step-w:   36px;
+  }
 }
 `;
 
@@ -5891,7 +5928,7 @@ ${report}
   __name(renderSettings, "renderSettings");
 
   // plugin.js
-  var PLUGIN_VERSION = "1.1.4";
+  var PLUGIN_VERSION = "1.1.6";
   var PLUGIN_NAME = "Find and Replace";
   var SLUG = "find-and-replace";
   var ROOT_CLASS = "plg-fnr";
@@ -6543,6 +6580,16 @@ ${report}
       }));
     }
     _selectAll() {
+      const open = this._session;
+      if (open && open.query && this._chip && this._chip.contains(document.activeElement)) {
+        open.mode = "all";
+        open.selected = [];
+        open.stepping = false;
+        open.paint();
+        this._refreshChip(false);
+        this._chip.focus("replace", void 0, { select: false });
+        return;
+      }
       const panel2 = this._editorPanel();
       if (!panel2) return;
       const editorFocus = (
